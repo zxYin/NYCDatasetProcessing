@@ -3,6 +3,8 @@ import argparse
 import utils
 import numpy as np
 
+EMPTY_ID = "EMPTY_ID"
+
 def print_time():
     ''' Print the current time. '''
     print("  Timestamp:", datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"))
@@ -14,10 +16,10 @@ def get_next(year, month):
     else:
         return (year, month + 1)
 
-def process( startyear  = 2010,
-             startmonth = 1,
-             endyear    = 2013,
-             endmonth   = 12,
+def process( startyear  = 2016,
+             startmonth = 10,
+             endyear    = 2016,
+             endmonth   = 11,
              width      = 10,
              height     = 20,
              n          = 4,
@@ -45,7 +47,7 @@ def process( startyear  = 2010,
     fdata_next_mo = utils.gen_empty_fdata(year=startyear, month=startmonth, w=width, h=height, n=n)
     
     for (year, month) in dates:
-        trips = np.zeros((2, 2, 2)) # Statistical info about the trips this month. (See README)
+        trips = np.zeros((2, 2)) # Statistical info about the trips this month. (See README)
         invalid_count = 0    # Entries that are parsable, but are not a valid trip
         unparsable_count = 0 # Entries that raise an error on parsing
         line_number = 0
@@ -60,34 +62,42 @@ def process( startyear  = 2010,
         vdata_next_mo = utils.gen_empty_vdata(year=next_year, month=next_month, w=width, h=height, n=n)
         fdata_next_mo = utils.gen_empty_fdata(year=next_year, month=next_month, w=width, h=height, n=n)
         
-        load_filename = "../decompressed/FOIL"+str(year)+"/trip_data_"+str(month)+".csv"
-        #load_filename = "example.csv"
+        # load_filename = "../decompressed/FOIL"+str(year)+"/trip_data_"+str(month)+".csv"
+        load_filename = "../demoData.text"
         
         if V:
             print("Starting on",year,month)
             print_time()
         
-        with open(load_filename, "r") as read_f:
+        with open(load_filename, "r", encoding='UTF-8') as read_f:
             read_f.readline() # Skip header
-            for line in read_f:
+            lines = read_f.readlines()
+            start_entry = {"id": EMPTY_ID}
+
+            for line in lines:
                 line_number += 1
                 if V and ((line_number % 1000000) == 0):
                     print("    Line", line_number)
                 try:
                     # This is where the processing happens.
-                    entry = utils.process_entry(line=line, n=n)
-                    if utils.check_valid(entry=entry, year=year, month=month):
-                        utils.update_data(entry=entry,
-                                          vdata=vdata,
-                                          fdata=fdata,
-                                          vdata_next_mo=vdata_next_mo,
-                                          fdata_next_mo=fdata_next_mo,
-                                          trips=trips,
-                                          w=width,
-                                          h=height,
-                                          n=n)
-                    else:
-                        invalid_count += 1
+                    (entry, is_next) = utils.process_entry(line=line, start_entry=start_entry, n=n, is_last=(line is lines[-1]))
+                    if is_next:
+                        if not start_entry["id"] == EMPTY_ID:
+                            if utils.check_valid(entry=entry, start_entry=start_entry, year=year, month=month):
+                                utils.update_data(entry=entry,
+                                                start_entry=start_entry,
+                                                vdata=vdata,
+                                                fdata=fdata,
+                                                vdata_next_mo=vdata_next_mo,
+                                                fdata_next_mo=fdata_next_mo,
+                                                trips=trips,
+                                                w=width,
+                                                h=height,
+                                                n=n)
+                            else:
+                                invalid_count += 1
+
+                        start_entry = entry
                 except:
                     unparsable_count += 1
                     print("  ERROR - could not parse line", line_number)
@@ -144,10 +154,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     # Defaults 
-    startyear   = 2010  if args.startyear   is None else args.startyear[0]
-    startmonth  = 1     if args.startmonth  is None else args.startmonth[0]
-    endyear     = 2013  if args.endyear     is None else args.endyear[0]
-    endmonth    = 12    if args.endmonth    is None else args.endmonth[0]
+    startyear   = 2016  if args.startyear   is None else args.startyear[0]
+    startmonth  = 10     if args.startmonth  is None else args.startmonth[0]
+    endyear     = 2016  if args.endyear     is None else args.endyear[0]
+    endmonth    = 11    if args.endmonth    is None else args.endmonth[0]
     width       = 10    if args.width       is None else args.width[0]
     height      = 20    if args.height      is None else args.height[0]
     n           = 4     if args.nslotsperhour is None else args.nslotsperhour[0]
