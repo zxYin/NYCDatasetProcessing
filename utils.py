@@ -6,10 +6,10 @@ from GPSUtils import pgps_to_xy, gps_distance
 from math import floor
 import numpy as np
 
-def get_t(day, hour, minute, n=4):
+def get_t(hour, minute, n=4):
     ''' Returns the sample numbr given the day, hour, and minute.
     Day is 1-indexed, hour and minute is 0 indexed.'''
-    return floor( ((((day-1)*24 + hour)*60) + minute)/floor((60/n)) )
+    return floor( ((hour*60) + minute)/floor((60/n)) )
 
 def process_entry(line, start_entry, n=4, is_last=False):
     ''' Given string line from the .csv,
@@ -33,8 +33,7 @@ def process_entry(line, start_entry, n=4, is_last=False):
     # Warning: Uses prebaked Manhattan values.
     x, y = pgps_to_xy(lon, lat)
     # Get the starting and ending times
-    t = get_t(day    = time.day,
-               hour   = time.hour,
+    t = get_t( hour   = time.hour,
                minute = time.minute,
                n      = n)
     
@@ -60,7 +59,7 @@ def process_entry(line, start_entry, n=4, is_last=False):
     
     return (entry, True)
 
-def check_valid(entry, start_entry, year, month, min_time=59, max_speed=36, min_distance=100):
+def check_valid(entry, start_entry, year, month, day, min_time=59, max_speed=36, min_distance=100):
     ''' Ensure an entry meets these following rules:
     1. Starts during the same year/month as the provided parameters.
     2. l2 distance is at least min_distance  (100m)
@@ -71,6 +70,7 @@ def check_valid(entry, start_entry, year, month, min_time=59, max_speed=36, min_
     '''
     if not start_entry['year']  == year:   return False
     if not start_entry['month'] == month:  return False
+    if not start_entry['day'] == day:  return False
 
     l2distance = gps_distance((start_entry['lat'], start_entry['lon']), (entry['lat'], entry['lon']))
     if not l2distance >= min_distance: return False
@@ -83,19 +83,30 @@ def check_valid(entry, start_entry, year, month, min_time=59, max_speed=36, min_
     return True
     
 
-def generate_dates(start_year = 2010, start_month = 1, end_year = 2013, end_month = 12):
+def generate_dates(start_year = 2010, start_month = 1, start_day = 1, end_year = 2013, end_month = 12, end_day = 30):
     ''' Returns a list of (year, month) tuples from
         (start_year, start_month) to (end_year, end_month), inclusive.'''
     year = start_year
     month = start_month
-    dates = [(year, month)]
-    while not (year, month) == (end_year, end_month):
+    day = start_day
+    dates = []
+    while True:
+        days = no_days_in_mo(year, month)
+        while not (year, month, day) == (end_year, end_month, end_day):
+            if day <= days:
+                dates.append((year, month, day))
+                day += 1
+            else:
+                day = 1
+                break
+        if (year, month, day) == (end_year, end_month, end_day):
+            break
+
         if month == 12:
             year += 1
             month = 1
         else:
             month += 1
-        dates.append((year, month))
     
     return dates
 
@@ -115,21 +126,15 @@ def no_days_in_mo(year, month):
         else:
             return 29
 
-def no_samples_in_mo(year, month, n=4):
-    ''' Return the number of timeslots in a given year and month '''
-    return no_days_in_mo(year=year, month=month)*24*n
-
-def gen_empty_vdata(year, month, w=10, h=20, n=4):
+def gen_empty_vdata(w=10, h=20, n=4):
     ''' Return an all-zero 'vdata' numpy array.
     Used to store volume data, as per the STDN.'''
-    samples = no_samples_in_mo(year=year, month=month, n=n)
-    return np.zeros((samples, w, h, 2), dtype=np.int16)
+    return np.zeros((24 * n, w, h, 2), dtype=np.int16)
 
-def gen_empty_fdata(year, month, w=10, h=20, n=4):
+def gen_empty_fdata(w=10, h=20, n=4):
     ''' Return an all-zero 'fdata' numpy array.
     Used to store flow data, as per the STDN.'''
-    samples = no_samples_in_mo(year=year, month=month, n=n)
-    return np.zeros((2, samples, w, h, w, h), dtype=np.int16)
+    return np.zeros((2, 24 * n, w, h, w, h), dtype=np.int16)
 
 def update_data(entry, start_entry, vdata, fdata, vdata_next_mo, fdata_next_mo, trips, w=10, h=20, n=4):
     ''' Updates the given numpy arrays with data from the provided entry.
@@ -152,7 +157,7 @@ def update_data(entry, start_entry, vdata, fdata, vdata_next_mo, fdata_next_mo, 
     start_inside = (0 <= start_entry['x'] <= 1) and (0 <= start_entry['y'] <= 1)
     end_inside = (0 <= entry['x'] <= 1) and (0 <= entry['y'] <= 1)
     
-    starts_and_ends_in_same_month = (start_entry['month'] == entry['month'])
+    starts_and_ends_in_same_day = (start_entry['day'] == entry['day'])
 
     # Variable names:
     #   s/e stands for start/end, g stands for grid, x/y are coordinates
@@ -185,7 +190,7 @@ def update_data(entry, start_entry, vdata, fdata, vdata_next_mo, fdata_next_mo, 
 
     if end_inside:
         # Update volume data for the end of the trip.
-        if starts_and_ends_in_same_month:
+        if starts_and_ends_in_same_day:
             vdata[entry['t'], egx, egy, 1] += 1
         
         else: # Ends during the next month, so use the array representing the next month

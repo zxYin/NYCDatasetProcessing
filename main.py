@@ -9,17 +9,12 @@ def print_time():
     ''' Print the current time. '''
     print("  Timestamp:", datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"))
 
-def get_next(year, month):
-    ''' Get the (year, month) combo following the provided (year, month)'''
-    if month == 12:
-        return (year + 1, 1)
-    else:
-        return (year, month + 1)
-
 def process( startyear  = 2016,
              startmonth = 10,
+             startday   = 1,
              endyear    = 2016,
-             endmonth   = 11,
+             endmonth   = 10,
+             endday     = 2,
              width      = 10,
              height     = 20,
              n          = 4,
@@ -40,13 +35,13 @@ def process( startyear  = 2016,
             the first year, month.
     '''
     # List of year-month dates to iterate over.
-    dates = utils.generate_dates(startyear, startmonth, endyear, endmonth)
+    dates = utils.generate_dates(startyear, startmonth, startday, endyear, endmonth, endday)
 
     # Generate empty arrays for the 'next month' of data.
-    vdata_next_mo = utils.gen_empty_vdata(year=startyear, month=startmonth, w=width, h=height, n=n)
-    fdata_next_mo = utils.gen_empty_fdata(year=startyear, month=startmonth, w=width, h=height, n=n)
+    vdata_next_mo = utils.gen_empty_vdata(w=width, h=height, n=n)
+    fdata_next_mo = utils.gen_empty_fdata(w=width, h=height, n=n)
 
-    for (year, month) in dates:
+    for (year, month, day) in dates:
         trips = np.zeros((2, 2)) # Statistical info about the trips this month. (See README)
         invalid_count = 0    # Entries that are parsable, but are not a valid trip
         unparsable_count = 0 # Entries that raise an error on parsing
@@ -58,12 +53,12 @@ def process( startyear  = 2016,
 
         # Generate new, empty 'next-month' arrays
         #   (For trips that cross the boundary, e.g. 2-28 at 11:59 to 3:01 at 0:02
-        next_year, next_month = get_next(year=year, month=month)
-        vdata_next_mo = utils.gen_empty_vdata(year=next_year, month=next_month, w=width, h=height, n=n)
-        fdata_next_mo = utils.gen_empty_fdata(year=next_year, month=next_month, w=width, h=height, n=n)
+        vdata_next_mo = utils.gen_empty_vdata(w=width, h=height, n=n)
+        fdata_next_mo = utils.gen_empty_fdata(w=width, h=height, n=n)
 
-        # load_filename = "../decompressed/FOIL"+str(year)+"/trip_data_"+str(month)+".csv"
-        load_filename = "./demoData.text"
+        load_filename = "./gps_"+f"{year:04}"+f"{month:02}"+f"{day:02}"+".text"
+        print(load_filename)
+        # load_filename = "./demoData.text"
 
         if V:
             print("Starting on",year,month)
@@ -83,7 +78,7 @@ def process( startyear  = 2016,
                     (entry, is_next) = utils.process_entry(line=line, start_entry=start_entry, n=n, is_last=(line is lines[-1]))
                     if is_next:
                         if not start_entry["id"] == EMPTY_ID:
-                            if utils.check_valid(entry=entry, start_entry=start_entry, year=year, month=month):
+                            if utils.check_valid(entry=entry, start_entry=start_entry, year=year, month=month, day=day):
                                 utils.update_data(entry=entry,
                                                 start_entry=start_entry,
                                                 vdata=vdata,
@@ -104,12 +99,12 @@ def process( startyear  = 2016,
 
         print("    Line", line_number)
 
-        if restart and year == startyear and month == startmonth:
+        if restart and year == startyear and month == startmonth and day == startday:
             if V:
-                print("Not saving for", year, month, "due to restart flag.")
+                print("Not saving for", year, month, day, "due to restart flag.")
         else:
             # Save the file
-            save_filename_date = str(year)+"-"+str(month).zfill(2)
+            save_filename_date = f"{year:04}"+f"{month:02}"+f"{day:02}"
 
             if V:
                 print("Saving",save_filename_date)
@@ -129,11 +124,17 @@ if __name__ == '__main__':
     parser.add_argument("--startmonth", "-sm",
                         help="Month to start processing from. Default 1.",
                         type=int, nargs=1)
+    parser.add_argument("--startday", "-sd",
+                        help="Day to start processing from. Default 1.",
+                        type=int, nargs=1)
     parser.add_argument("--endyear", "-ey",
                         help="Year to finish processing (inclusive). Default 2013.",
                         type=int, nargs=1)
     parser.add_argument("--endmonth", "-em",
                         help="Month to finish processing (inclusive). Default 12.",
+                        type=int, nargs=1)
+    parser.add_argument("--endday", "-ed",
+                        help="Day to finish processing from. Default 1.",
                         type=int, nargs=1)
     parser.add_argument("--width", "-x",
                         help="Width of grid (default 10)",
@@ -155,9 +156,11 @@ if __name__ == '__main__':
 
     # Defaults
     startyear   = 2016  if args.startyear   is None else args.startyear[0]
-    startmonth  = 10     if args.startmonth  is None else args.startmonth[0]
+    startmonth  = 10    if args.startmonth  is None else args.startmonth[0]
+    startday    = 1     if args.startday  is None else args.startday[0]
     endyear     = 2016  if args.endyear     is None else args.endyear[0]
-    endmonth    = 11    if args.endmonth    is None else args.endmonth[0]
+    endmonth    = 10    if args.endmonth    is None else args.endmonth[0]
+    endday      = 2     if args.endday  is None else args.endday[0]
     width       = 10    if args.width       is None else args.width[0]
     height      = 20    if args.height      is None else args.height[0]
     n           = 4     if args.nslotsperhour is None else args.nslotsperhour[0]
@@ -170,15 +173,17 @@ if __name__ == '__main__':
         print_time()
         print("Running with arguments:")
         print("  Verbose")
-        print("  ",startyear, ", ", startmonth, " to ", endyear, ", ", endmonth, ".",sep="")
+        print("  ",startyear, ", ", startmonth, ", ", startday, " to ", endyear, ", ", endmonth, ", ", endday, ".",sep="")
         print("  With",n,"samples year hour.")
         print("  On a grid of size ",width,"x",height,".", sep="")
 
     # Begin processing data
     process( startyear  = startyear,
              startmonth = startmonth,
+             startday   = startday,
              endyear    = endyear,
              endmonth   = endmonth,
+             endday     = endday,
              width      = width,
              height     = height,
              n          = n,
