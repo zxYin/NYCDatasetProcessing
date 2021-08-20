@@ -101,7 +101,7 @@ def check_valid(entry, year, month, min_time=59, max_speed=36, min_distance=100)
     return True
     
 
-def generate_dates(start_year = 2010, start_month = 1, end_year = 2013, end_month = 12):
+def generate_dates(start_year = 2015, start_month = 1, end_year = 2015, end_month = 12):
     ''' Returns a list of (year, month) tuples from
         (start_year, start_month) to (end_year, end_month), inclusive.'''
     year = start_year
@@ -137,27 +137,33 @@ def no_samples_in_mo(year, month, n=4):
     ''' Return the number of timeslots in a given year and month '''
     return no_days_in_mo(year=year, month=month)*24*n
 
-def gen_empty_vdata(year, month, w=10, h=20, n=4):
-    ''' Return an all-zero 'vdata' numpy array.
+def gen_empty_flow_data(year, month, w=10, h=20, n=4):
+    ''' Return an all-zero 'flow_data' numpy array.
     Used to store volume data, as per the STDN.'''
     samples = no_samples_in_mo(year=year, month=month, n=n)
     return np.zeros((samples, w, h, 2, 2), dtype=np.int16)
 
-def gen_empty_fdata(year, month, w=10, h=20, n=4):
-    ''' Return an all-zero 'fdata' numpy array.
+def gen_empty_transition_data(year, month, w=10, h=20, n=4):
+    ''' Return an all-zero 'transition_data' numpy array.
     Used to store flow data, as per the STDN.'''
     samples = no_samples_in_mo(year=year, month=month, n=n)
-    return np.zeros((2, samples, w, h, w, h, 2), dtype=np.int16)
+    return np.zeros((samples, w, h, w, h, 2), dtype=np.int16)
 
-def update_data(entry, vdata, fdata, vdata_next_mo, fdata_next_mo, trips, w=10, h=20, n=4):
+def gen_empty_od_data(year, month, w=10, h=20, n=4):
+    ''' Return an all-zero 'transition_data' numpy array.
+    Used to store flow data, as per the STDN.'''
+    samples = no_samples_in_mo(year=year, month=month, n=n)
+    return np.zeros((samples, w, h, w, h, 2), dtype=np.int16)
+
+def update_data(entry, flow_data, transition_data, od_data, flow_data_next_mo, w=10, h=20, n=4):
     ''' Updates the given numpy arrays with data from the provided entry.
         Returns nothing.
     
     # Arguments:
         entry: Dictionary providing pertinent values for a given trip.
-        vdata, fdata: Numpy arrays representing the volume and flow
+        flow_data, transition_data: Numpy arrays representing the volume and flow
             data for a given month.
-        vdata_next_mo, fdata_next_mo: Numpy array representing the
+        flow_data_next_mo, transition_data_next_mo: Numpy array representing the
             volume and flow data for the next month. (Useful for those
             trips that start in this month and end in the next.)
         trips: Numpy array that stores statistical information about
@@ -180,41 +186,33 @@ def update_data(entry, vdata, fdata, vdata_next_mo, fdata_next_mo, trips, w=10, 
     egy = floor(entry['ey']*h) #end-y, mapped to grid coordinates
     pcount = entry['pcount']
     
-    # Trips is a (2,2,2) array: [starts in/outside, ends in/side, passenger/trip count]
-    trips[int(not starts_inside), int(not ends_inside), 0] += pcount
-    trips[int(not starts_inside), int(not ends_inside), 1] += 1
-    
     # Data-update rules below come from the definition of volume and flow, per the STDN paper.
     # Data shape is taken from the shape used in the original STDN code.
     #   Note: Here, Passenger count and trip count are recorded separately.
     if starts_inside:
         # Update volume data for the start of the trip
-        vdata[entry['st'], sgx, sgy, 0, 0] += pcount
-        vdata[entry['st'], sgx, sgy, 0, 1] += 1
+        flow_data[entry['st'], sgx, sgy, 0, 0] += pcount
+        flow_data[entry['st'], sgx, sgy, 0, 1] += 1
         
         if ends_inside:
             # Update volume data only if the trip starts and ends within Manhattan.
             if entry['st'] == entry['et']:
                 # st == et, so we don't need to check if et is in the
                 #    next month.
-                fdata[0, entry['et'], sgx, sgy, egx, egy, 0] += pcount
-                fdata[0, entry['et'], sgx, sgy, egx, egy, 1] += 1
-            else:
-                if starts_and_ends_in_same_month:
-                    fdata[1, entry['et'], sgx, sgy, egx, egy, 0] += pcount
-                    fdata[1, entry['et'], sgx, sgy, egx, egy, 1] += 1
-                else: # End time crosses over to the next month
-                    fdata_next_mo[1, entry['et'], sgx, sgy, egx, egy, 0] += pcount
-                    fdata_next_mo[1, entry['et'], sgx, sgy, egx, egy, 1] += 1
+                transition_data[entry['et'], sgx, sgy, egx, egy, 0] += pcount
+                transition_data[entry['et'], sgx, sgy, egx, egy, 1] += 1
+
+                od_data[entry['et'], sgx, sgy, egx, egy, 0] += pcount
+                od_data[entry['et'], sgx, sgy, egx, egy, 1] += 1
 
     if ends_inside:
         # Update volume data for the end of the trip.
         if starts_and_ends_in_same_month:
-            vdata[entry['et'], egx, egy, 1, 0] += pcount
-            vdata[entry['et'], egx, egy, 1, 1] += 1
+            flow_data[entry['et'], egx, egy, 1, 0] += pcount
+            flow_data[entry['et'], egx, egy, 1, 1] += 1
         
         else: # Ends during the next month, so use the array representing the next month
-            vdata_next_mo[entry['et'], egx, egy, 1, 0] += pcount
-            vdata_next_mo[entry['et'], egx, egy, 1, 1] += 1
+            flow_data_next_mo[entry['et'], egx, egy, 1, 0] += pcount
+            flow_data_next_mo[entry['et'], egx, egy, 1, 1] += 1
             
     # Returns nothing - numpy arrays are updated by reference.
