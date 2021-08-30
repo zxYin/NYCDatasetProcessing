@@ -4,12 +4,12 @@
 from math import sin, cos, floor, radians, atan2, sqrt
 import numpy as np
 
-origin_longitude        = 104.09820220999862
-origin_latitude         = 29.08620069000006
-top_left_longitude      = 102.4255
-top_left_latitude       = 31.4978
-bottom_right_longitude  = 105.4605
-bottom_right_latitude   = 30.0311
+origin_longitude        = -74.0204
+origin_latitude         =  40.7467
+top_left_longitude      = -73.95
+top_left_latitude       =  40.77
+bottom_right_longitude  = -74.02
+bottom_right_latitude   =  40.67
 
 # Top-right lat/lon 40.78907511 -73.92568926
 
@@ -57,8 +57,8 @@ def gps_to_xy( lon, lat,
 
 # Values for the prebaked function below:
 origin_array = np.array([origin_longitude, origin_latitude])
-inv_basis = np.array([[ 0.49561711, -0.19418992],
-                      [ 0.34376351,  0.27997109]])
+inv_basis = np.array([[4.30763542,  14.18007025],
+                     [-13.0153448,    0.07395082]])
 
 def pgps_to_xy(lon, lat):
     ''' gps_to_xy, using prebaked values to increase performance.'''

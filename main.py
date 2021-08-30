@@ -1,5 +1,4 @@
 import datetime
-import argparse
 import utils
 import numpy as np
 
@@ -11,10 +10,8 @@ def print_time():
 
 def process( startyear  = 2016,
              startmonth = 10,
-             startday   = 1,
              endyear    = 2016,
              endmonth   = 10,
-             endday     = 2,
              width      = 10,
              height     = 20,
              n          = 4,
@@ -35,30 +32,21 @@ def process( startyear  = 2016,
             the first year, month.
     '''
     # List of year-month dates to iterate over.
-    dates = utils.generate_dates(startyear, startmonth, startday, endyear, endmonth, endday)
+    dates = utils.generate_dates(startyear, startmonth, endyear, endmonth)
 
     # Generate empty arrays for the 'next month' of data.
-    vdata_next_mo = utils.gen_empty_vdata(w=width, h=height, n=n)
-    fdata_next_mo = utils.gen_empty_fdata(w=width, h=height, n=n)
 
-    for (year, month, day) in dates:
-        trips = np.zeros((2, 2)) # Statistical info about the trips this month. (See README)
+    for (year, month) in dates:
         invalid_count = 0    # Entries that are parsable, but are not a valid trip
         unparsable_count = 0 # Entries that raise an error on parsing
         line_number = 0
 
-        # Shift the vdata, fdata that are in-focus to this month
-        vdata = vdata_next_mo
-        fdata = fdata_next_mo
-
-        # Generate new, empty 'next-month' arrays
-        #   (For trips that cross the boundary, e.g. 2-28 at 11:59 to 3:01 at 0:02
-        vdata_next_mo = utils.gen_empty_vdata(w=width, h=height, n=n)
-        fdata_next_mo = utils.gen_empty_fdata(w=width, h=height, n=n)
-
-        load_filename = "./gps_"+f"{year:04}"+f"{month:02}"+f"{day:02}"+".text"
+        load_filename = "./data.nosync/yellow_tripdata_"+f"{year:04}"+"-"+f"{month:02}"+".csv"
         print(load_filename)
         # load_filename = "./demoData.text"
+
+        vdata = utils.gen_empty_vdata(year=year, month =month, w=width, h=height, n=n)
+        fdata = utils.gen_empty_fdata(year=year, month =month, w=width, h=height, n=n)
 
         if V:
             print("Starting on",year,month)
@@ -67,49 +55,33 @@ def process( startyear  = 2016,
         with open(load_filename, "r", encoding='UTF-8') as read_f:
             read_f.readline() # Skip header
             lines = read_f.readlines()
-            start_entry = {"id": EMPTY_ID}
 
             for line in lines:
                 line_number += 1
                 if V and ((line_number % 1000000) == 0):
                     print("    Line", line_number)
-                try:
+                # try:
                     # This is where the processing happens.
-                    (entry, is_next) = utils.process_entry(line=line, start_entry=start_entry, n=n, is_last=(line is lines[-1]))
-                    if is_next:
-                        if not start_entry["id"] == EMPTY_ID:
-                            if utils.check_valid(entry=entry, start_entry=start_entry, year=year, month=month, day=day):
-                                utils.update_data(entry=entry,
-                                                start_entry=start_entry,
-                                                vdata=vdata,
-                                                fdata=fdata,
-                                                vdata_next_mo=vdata_next_mo,
-                                                fdata_next_mo=fdata_next_mo,
-                                                trips=trips,
-                                                w=width,
-                                                h=height,
-                                                n=n)
-                            else:
-                                invalid_count += 1
+                entry = utils.process_entry(line=line, n=n)
+                if utils.check_valid(entry=entry, year=year, month=month):
+                    utils.update_data(entry=entry,
+                                    vdata=vdata,
+                                    fdata=fdata,
+                                    w=width,
+                                    h=height,
+                                    n=n)
+                else:
+                    invalid_count += 1
+                # except:
+                    # unparsable_count += 1
+                    # print("  ERROR - could not parse line", line_number)
+                if line_number % 300000 == 0:
+                    print(load_filename + ": ", line_number)
 
-                        start_entry = entry
-                except:
-                    unparsable_count += 1
-                    print("  ERROR - could not parse line", line_number)
+        print("Finish ", load_filename)
 
-        print("    Line", line_number)
-
-        if restart and year == startyear and month == startmonth and day == startday:
-            if V:
-                print("Not saving for", year, month, day, "due to restart flag.")
-        else:
-            # Save the file
-            save_filename_date = f"{year:04}"+f"{month:02}"+f"{day:02}"
-
-            if V:
-                print("Saving",save_filename_date)
-                print_time()
-            np.savez_compressed(save_filename_date + "-data.npz", vdata = vdata, fdata = fdata, trips = trips, errors = np.array([invalid_count, unparsable_count]))
+        save_filename_date = str(year)+"-"+str(month).zfill(2)+"-"+str(60/n)
+        np.savez_compressed(save_filename_date + ".npz", vdata = vdata, fdata = fdata, errors = np.array([invalid_count, unparsable_count]))
 
     if V:
         print("All finished!")
@@ -117,76 +89,21 @@ def process( startyear  = 2016,
 
 if __name__ == '__main__':
     # Parse arguments
-    parser = argparse.ArgumentParser(description="NYC Dataset processing")
-    parser.add_argument("--startyear", "-sy",
-                        help="Year to start processing from. Default 2010",
-                        type=int, nargs=1)
-    parser.add_argument("--startmonth", "-sm",
-                        help="Month to start processing from. Default 1.",
-                        type=int, nargs=1)
-    parser.add_argument("--startday", "-sd",
-                        help="Day to start processing from. Default 1.",
-                        type=int, nargs=1)
-    parser.add_argument("--endyear", "-ey",
-                        help="Year to finish processing (inclusive). Default 2013.",
-                        type=int, nargs=1)
-    parser.add_argument("--endmonth", "-em",
-                        help="Month to finish processing (inclusive). Default 12.",
-                        type=int, nargs=1)
-    parser.add_argument("--endday", "-ed",
-                        help="Day to finish processing from. Default 1.",
-                        type=int, nargs=1)
-    parser.add_argument("--width", "-x",
-                        help="Width of grid (default 10)",
-                        type=int, nargs=1)
-    parser.add_argument("--height", "-y",
-                        help="Width of grid (default 20)",
-                        type=int, nargs=1)
-    parser.add_argument("--nslotsperhour", "-n",
-                        help="Discretize time into n slots per hour. Must be integer divisor of 60. (Default 4)",
-                        type=int, nargs=1)
-    parser.add_argument("--verbose", "-v",
-                        help="",
-                        action="store_true")
-    parser.add_argument("--restart", "-r",
-                        help="Does not save the first month of data. Used to restart code when it crashes. (E.g. 2010 08 can have trips starting in 2010 07 that end in 2010 08)",
-                        action="store_true")
-
-    args = parser.parse_args()
-
-    # Defaults
-    startyear   = 2016  if args.startyear   is None else args.startyear[0]
-    startmonth  = 10    if args.startmonth  is None else args.startmonth[0]
-    startday    = 1     if args.startday  is None else args.startday[0]
-    endyear     = 2016  if args.endyear     is None else args.endyear[0]
-    endmonth    = 10    if args.endmonth    is None else args.endmonth[0]
-    endday      = 2     if args.endday  is None else args.endday[0]
-    width       = 10    if args.width       is None else args.width[0]
-    height      = 20    if args.height      is None else args.height[0]
-    n           = 4     if args.nslotsperhour is None else args.nslotsperhour[0]
-    V = args.verbose
-    restart = args.restart
-
-    print("NYCDataProcessing/main.py started.")
-
-    if V:
-        print_time()
-        print("Running with arguments:")
-        print("  Verbose")
-        print("  ",startyear, ", ", startmonth, ", ", startday, " to ", endyear, ", ", endmonth, ", ", endday, ".",sep="")
-        print("  With",n,"samples year hour.")
-        print("  On a grid of size ",width,"x",height,".", sep="")
-
-    # Begin processing data
-    process( startyear  = startyear,
-             startmonth = startmonth,
-             startday   = startday,
-             endyear    = endyear,
-             endmonth   = endmonth,
-             endday     = endday,
-             width      = width,
-             height     = height,
-             n          = n,
-             V          = V,
-             restart    = restart)
-
+    process( startyear  = 2015,
+             startmonth = 1,
+             endyear    = 2015,
+             endmonth   = 12,
+             width      = 16,
+             height     = 16,
+             n          = 6,
+             V          = False,
+             restart    = False)
+    process( startyear  = 2015,
+             startmonth = 1,
+             endyear    = 2015,
+             endmonth   = 12,
+             width      = 16,
+             height     = 16,
+             n          = 1,
+             V          = False,
+             restart    = False)
