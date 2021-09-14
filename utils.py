@@ -15,22 +15,26 @@ def process_entry(line, n=4):
     ''' Given string line from the .csv,
         return a dict representing that entry. '''
     entry_strings = line.strip().split(",")
-    regex_format = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
     
     # Extract the string out from scruff that might be around it
-    start_time_string = re.search(regex_format, entry_strings[1]).group()
-    end_time_string = re.search(regex_format, entry_strings[2]).group()
+    start_time_string = entry_strings[1].strip()
+    end_time_string = entry_strings[2].strip()
     
     # Parse the times using datetime
-    time_format = "%Y-%m-%d %H:%M:%S"
-    start_time = datetime.strptime(start_time_string, time_format)
-    end_time = datetime.strptime(end_time_string, time_format)
+    try:
+        time_format = "%m/%d/%Y %H:%M"
+        start_time = datetime.strptime(start_time_string, time_format)
+        end_time = datetime.strptime(end_time_string, time_format)
+    except:
+        time_format = "%m/%d/%Y %H:%M:%S"
+        start_time = datetime.strptime(start_time_string.strip('\"'), time_format)
+        end_time = datetime.strptime(end_time_string.strip('\"'), time_format)
     
     # Starting and ending GPS coordinates
-    slon = float(entry_strings[5].strip())
-    slat = float(entry_strings[6].strip())
-    elon = float(entry_strings[9].strip())
-    elat = float(entry_strings[10].strip())
+    slon = float(entry_strings[6].strip().strip('\"'))
+    slat = float(entry_strings[5].strip().strip('\"'))
+    elon = float(entry_strings[10].strip().strip('\"'))
+    elat = float(entry_strings[9].strip().strip('\"'))
     
     # Starting and ending grid coordinates and straight-line (l2) distance
     # Warning: Uses prebaked Manhattan values.
@@ -63,7 +67,6 @@ def process_entry(line, n=4):
         'ex' : ex,
         'ey' : ey,
         'l2distance' : l2distance,
-        'distance'   : float(entry_strings[4].strip()),
         'st' : st,
         'et' : et,
         'syear'  : start_time.year,
@@ -71,14 +74,11 @@ def process_entry(line, n=4):
         'sday'   : start_time.day,
         'shour'  : start_time.hour,
         'smin'   : start_time.minute,
-        'ssec'   : start_time.second,
         'eyear'  : end_time.year,
         'emonth' : end_time.month,
         'eday'   : end_time.day,
         'ehour'  : end_time.hour,
         'emin'   : end_time.minute,
-        'esec'   : end_time.second,
-        'pcount' : int(entry_strings[3].strip()), #Passenger count
         'deltat' : deltat
     }
     
@@ -176,14 +176,13 @@ def update_data(entry, vdata, fdata, w=10, h=20, n=4):
     sgy = floor(entry['sy']*h) #start-y, mapped to grid coordinates
     egx = floor(entry['ex']*w) #end-x, mapped to grid coordinates
     egy = floor(entry['ey']*h) #end-y, mapped to grid coordinates
-    pcount = entry['pcount']
     
     # Data-update rules below come from the definition of volume and flow, per the STDN paper.
     # Data shape is taken from the shape used in the original STDN code.
     #   Note: Here, Passenger count and trip count are recorded separately.
     if start_inside:
         # Update volume data for the start of the trip
-        vdata[entry['st'], sgx, sgy, 0, 0] += pcount
+        vdata[entry['st'], sgx, sgy, 0, 0] += 1
         vdata[entry['st'], sgx, sgy, 0, 1] += 1
         
         if end_inside:
@@ -191,11 +190,11 @@ def update_data(entry, vdata, fdata, w=10, h=20, n=4):
             if entry['st'] == entry['et']:
                 # st == et, so we don't need to check if et is in the
                 #    next month.
-                fdata[entry['et'], sgx, sgy, egx, egy, 0] += pcount
+                fdata[entry['et'], sgx, sgy, egx, egy, 0] += 1
                 fdata[entry['et'], sgx, sgy, egx, egy, 1] += 1
             
     if end_inside:
-        vdata[entry['et'], egx, egy, 1, 0] += pcount
+        vdata[entry['et'], egx, egy, 1, 0] += 1
         vdata[entry['et'], egx, egy, 1, 1] += 1
 
     # Returns nothing - numpy arrays are updated by reference.
