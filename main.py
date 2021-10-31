@@ -95,15 +95,6 @@ if __name__ == '__main__':
              endmonth   = 12,
              width      = 16,
              height     = 16,
-             n          = 6,
-             V          = False,
-             restart    = False)
-    process( startyear  = 2015,
-             startmonth = 1,
-             endyear    = 2015,
-             endmonth   = 12,
-             width      = 16,
-             height     = 16,
              n          = 1,
              V          = False,
              restart    = False)

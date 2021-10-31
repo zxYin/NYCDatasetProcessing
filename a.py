@@ -1,5 +1,5 @@
 import numpy as np; 
-n = 6
+n = 1
 fdata_total = None
 vdata_total = None
 
@@ -16,7 +16,7 @@ for month in range (1, 13):
 print(fdata_total.shape)
 print(vdata_total.shape)
 
-np.savez_compressed("od_10.npz", vdata = vdata_total, fdata = fdata_total)
+np.savez_compressed("taxi_od_60.npz", vdata = vdata_total, fdata = fdata_total)
 print("finish")
 
 # data1 = np.load("2015-01.npz")
