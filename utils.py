@@ -16,22 +16,22 @@ def process_entry(line, n=4):
         return a dict representing that entry. '''
     entry_strings = line.strip().split(",")
     regex_format = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
-    
+
     # Extract the string out from scruff that might be around it
     start_time_string = re.search(regex_format, entry_strings[1]).group()
     end_time_string = re.search(regex_format, entry_strings[2]).group()
-    
+
     # Parse the times using datetime
     time_format = "%Y-%m-%d %H:%M:%S"
     start_time = datetime.strptime(start_time_string, time_format)
     end_time = datetime.strptime(end_time_string, time_format)
-    
+
     # Starting and ending GPS coordinates
     slon = float(entry_strings[5].strip())
     slat = float(entry_strings[6].strip())
     elon = float(entry_strings[9].strip())
     elat = float(entry_strings[10].strip())
-    
+
     # Starting and ending grid coordinates and straight-line (l2) distance
     # Warning: Uses prebaked Manhattan values.
     sx, sy = pgps_to_xy(slon, slat)
@@ -46,13 +46,13 @@ def process_entry(line, n=4):
                hour   = end_time.hour,
                minute = end_time.minute,
                n      = n)
-    
+
     # Get the change in time (deltat) in seconds.
     if end_time > start_time: # Normal case
         deltat = (end_time - start_time).seconds
     else: # Case: start_time is after end_time
         deltat = -(start_time - end_time).seconds
-    
+
     # Convention:
     # 's' stands for 'start', 'e' stands for 'end',
     # 'x' and 'y' stand for x/y coordinates respectively,
@@ -81,7 +81,7 @@ def process_entry(line, n=4):
         'pcount' : int(entry_strings[3].strip()), #Passenger count
         'deltat' : deltat
     }
-    
+
     return entry
 
 def check_valid(entry, year, month, min_time=59, max_speed=36, min_distance=100):
@@ -90,16 +90,16 @@ def check_valid(entry, year, month, min_time=59, max_speed=36, min_distance=100)
     2. l2 distance is at least min_distance  (100m)
     3. Trip lasts at least min_time (59s)
     4. Trip speed straight line distance doesn't exceed max speed (36m/s)
-    
+
     Returns 'True' if valid, 'False' if not.
     '''
     if not entry['syear']  == year:   return False
     if not entry['smonth'] == month:  return False
     if not entry['l2distance'] >= min_distance:return False
     if not entry['deltat'] >= min_time: return False
-    if not (entry['l2distance'] / entry['deltat']) <= max_speed: return False 
+    if not (entry['l2distance'] / entry['deltat']) <= max_speed: return False
     return True
-    
+
 
 def generate_dates(start_year = 2015, start_month = 1, end_year = 2015, end_month = 12):
     ''' Returns a list of (year, month) tuples from
@@ -114,7 +114,7 @@ def generate_dates(start_year = 2015, start_month = 1, end_year = 2015, end_mont
         else:
             month += 1
         dates.append((year, month))
-    
+
     return dates
 
 def no_days_in_mo(year, month):
@@ -152,7 +152,7 @@ def gen_empty_fdata(year, month, w=10, h=20, n=4):
 def update_data(entry, vdata, fdata, w=10, h=20, n=4):
     ''' Updates the given numpy arrays with data from the provided entry.
         Returns nothing.
-    
+
     # Arguments:
         entry: Dictionary providing pertinent values for a given trip.
         vdata, fdata: Numpy arrays representing the volume and flow
@@ -169,7 +169,7 @@ def update_data(entry, vdata, fdata, w=10, h=20, n=4):
     # True if the trip starts within Manhattan, false otherwise
     start_inside = (0 <= entry['sx'] <= 1) and (0 <= entry['sy'] <= 1)
     end_inside = (0 <= entry['ex'] <= 1) and (0 <= entry['ey'] <= 1)
-    
+
     # Variable names:
     #   s/e stands for start/end, g stands for grid, x/y are coordinates
     sgx = floor(entry['sx']*w) #start-x, mapped to grid coordinates
@@ -177,7 +177,7 @@ def update_data(entry, vdata, fdata, w=10, h=20, n=4):
     egx = floor(entry['ex']*w) #end-x, mapped to grid coordinates
     egy = floor(entry['ey']*h) #end-y, mapped to grid coordinates
     pcount = entry['pcount']
-    
+
     # Data-update rules below come from the definition of volume and flow, per the STDN paper.
     # Data shape is taken from the shape used in the original STDN code.
     #   Note: Here, Passenger count and trip count are recorded separately.
@@ -185,15 +185,17 @@ def update_data(entry, vdata, fdata, w=10, h=20, n=4):
         # Update volume data for the start of the trip
         vdata[entry['st'], sgx, sgy, 0, 0] += pcount
         vdata[entry['st'], sgx, sgy, 0, 1] += 1
-        
+
         if end_inside:
             # Update volume data only if the trip starts and ends within Manhattan.
-            if entry['st'] == entry['et']:
                 # st == et, so we don't need to check if et is in the
                 #    next month.
-                fdata[entry['et'], sgx, sgy, egx, egy, 0] += pcount
-                fdata[entry['et'], sgx, sgy, egx, egy, 1] += 1
-            
+            fdata[entry['et'], sgx, sgy, egx, egy, 0] += pcount
+            fdata[entry['et'], sgx, sgy, egx, egy, 1] += 1
+
+            fdata[entry['st'], sgx, sgy, egx, egy, 0] += pcount
+            fdata[entry['st'], sgx, sgy, egx, egy, 1] += 1
+
     if end_inside:
         vdata[entry['et'], egx, egy, 1, 0] += pcount
         vdata[entry['et'], egx, egy, 1, 1] += 1

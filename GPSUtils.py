@@ -4,18 +4,18 @@
 from math import sin, cos, floor, radians, atan2, sqrt
 import numpy as np
 
-origin_longitude        = -74.038971
-origin_latitude         =  40.709279
-top_left_longitude      = -73.96834326
-top_left_latitude       =  40.81703286
-bottom_right_longitude  = -73.996317
-bottom_right_latitude   =  40.68132125
-# origin_longitude        = -74.0204
-# origin_latitude         =  40.7467
-# top_left_longitude      = -73.95
-# top_left_latitude       =  40.77
-# bottom_right_longitude  = -74.02
-# bottom_right_latitude   =  40.67
+#  origin_longitude        = -74.038971
+#  origin_latitude         =  40.709279
+#  top_left_longitude      = -73.96834326
+#  top_left_latitude       =  40.81703286
+#  bottom_right_longitude  = -73.996317
+#  bottom_right_latitude   =  40.68132125
+origin_longitude        = -74.0204
+origin_latitude         =  40.7467
+top_left_longitude      = -73.95
+top_left_latitude       =  40.77
+bottom_right_longitude  = -74.02
+bottom_right_latitude   =  40.67
 
 # Top-right lat/lon 40.78907511 -73.92568926
 
@@ -33,7 +33,7 @@ def gps_to_xy( lon, lat,
     ''' gps_to_xy: Given a pair of GPS coordinates representing a
         location and 4 pairs of GPS coordinates defining a grid,
         get the GPS coordinates relative to that grid.
-        (See: https://en.wikipedia.org/wiki/Change_of_basis) 
+        (See: https://en.wikipedia.org/wiki/Change_of_basis)
     # Arguments:
         lon, lat: Floating points representing GPS coordinates
         xbuckets, ybuckets: Integers represnting the grid size.
@@ -55,7 +55,7 @@ def gps_to_xy( lon, lat,
     x = np.array([lon, lat]) - origin
     # Coordinates in terms of basis vectors
     c = np.matmul(x,np.linalg.inv(B))
-    
+
     if not toint:
         return c[0]*xbuckets, c[1]*ybuckets
     return floor(c[0]*xbuckets), floor(c[1]*ybuckets)
@@ -109,5 +109,5 @@ def gps_distance(origin, destination):
          sin(dlon / 2) * sin(dlon / 2))
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     d = radius * c
-    
+
     return d*1000
