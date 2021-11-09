@@ -79,7 +79,7 @@ def process( startyear  = 2016,
 
         print("Finish ", load_filename)
 
-        save_filename_date = "green-" + str(year)+"-"+str(month).zfill(2)+"-"+str(60/n)
+        save_filename_date = "new_output/green-" + str(year)+"-"+str(month).zfill(2)+"-"+str(60/n)
         np.savez_compressed(save_filename_date + ".npz", vdata = vdata, fdata = fdata)
 
     if V:
@@ -94,6 +94,6 @@ if __name__ == '__main__':
              endmonth   = 12,
              width      = 16,
              height     = 16,
-             n          = 1,
+             n          = 6,
              V          = False,
              restart    = False)
