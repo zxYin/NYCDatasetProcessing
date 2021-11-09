@@ -41,9 +41,8 @@ def process( startyear  = 2016,
         unparsable_count = 0 # Entries that raise an error on parsing
         line_number = 0
 
-        load_filename = "./data.nosync/yellow_tripdata_"+f"{year:04}"+"-"+f"{month:02}"+".csv"
+        load_filename = "./data.nosync/green_tripdata_"+f"{year:04}"+"-"+f"{month:02}"+".csv"
         print(load_filename)
-        # load_filename = "./demoData.text"
 
         vdata = utils.gen_empty_vdata(year=year, month =month, w=width, h=height, n=n)
         fdata = utils.gen_empty_fdata(year=year, month =month, w=width, h=height, n=n)
@@ -80,8 +79,8 @@ def process( startyear  = 2016,
 
         print("Finish ", load_filename)
 
-        save_filename_date = str(year)+"-"+str(month).zfill(2)+"-"+str(60/n)
-        np.savez_compressed(save_filename_date + ".npz", vdata = vdata, fdata = fdata, errors = np.array([invalid_count, unparsable_count]))
+        save_filename_date = "green-" + str(year)+"-"+str(month).zfill(2)+"-"+str(60/n)
+        np.savez_compressed(save_filename_date + ".npz", vdata = vdata, fdata = fdata)
 
     if V:
         print("All finished!")

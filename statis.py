@@ -33,7 +33,7 @@ def process( startyear  = 2016,
     valid_count = 0
     for (year, month) in dates:
 
-        load_filename = "./data.nosync/yellow_tripdata_"+f"{year:04}"+"-"+f"{month:02}"+".csv"
+        load_filename = "./data.nosync/green_tripdata_"+f"{year:04}"+"-"+f"{month:02}"+".csv"
         print(load_filename)
         # load_filename = "./demoData.text"
 
@@ -43,21 +43,21 @@ def process( startyear  = 2016,
 
             for line in lines:
                 total_count += 1
-                try:
-                    entry = utils.process_entry(line=line)
-                    if utils.check_valid(entry=entry, year=year, month=month):
-                        valid_count += 1
-                        if entry['deltat'] <= 0:
-                            delta_counts[0] += 1
-                        elif entry['deltat'] <= 3600:
-                            delta_counts[math.ceil(entry['deltat'] / 600.0) - 1] += 1
-                        else:
-                            delta_counts[6] += 1
+                # try:
+                entry = utils.process_entry(line=line)
+                if utils.check_valid(entry=entry, year=year, month=month):
+                    valid_count += 1
+                    if entry['deltat'] <= 0:
+                        delta_counts[0] += 1
+                    elif entry['deltat'] <= 3600:
+                        delta_counts[math.ceil(entry['deltat'] / 600.0) - 1] += 1
                     else:
-                        invalid_count += 1
-                except:
-                    unparsable_count += 1
-                    print("  ERROR - could not parse line")
+                        delta_counts[6] += 1
+                else:
+                    invalid_count += 1
+                # except:
+                #     unparsable_count += 1
+                #     print("  ERROR - could not parse line")
         print("Finish ", load_filename)
         print("Total Count: ", total_count)
         print("Valid Count: ", valid_count)

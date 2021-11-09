@@ -2,7 +2,7 @@
 
 import regex as re
 from datetime import datetime
-from GPSUtils import pgps_to_xy, gps_distance
+from GPSUtils import pgps_to_xy
 from math import floor
 import numpy as np
 
@@ -29,14 +29,13 @@ def process_entry(line, n=4):
     # Starting and ending GPS coordinates
     slon = float(entry_strings[5].strip())
     slat = float(entry_strings[6].strip())
-    elon = float(entry_strings[9].strip())
-    elat = float(entry_strings[10].strip())
+    elon = float(entry_strings[7].strip())
+    elat = float(entry_strings[8].strip())
     
     # Starting and ending grid coordinates and straight-line (l2) distance
     # Warning: Uses prebaked Manhattan values.
     sx, sy = pgps_to_xy(slon, slat)
     ex, ey = pgps_to_xy(elon, elat)
-    l2distance = gps_distance((slat, slon), (elat, elon))
     # Get the starting and ending times
     st = get_t(day    = start_time.day,
                hour   = start_time.hour,
@@ -62,8 +61,6 @@ def process_entry(line, n=4):
         'sy' : sy,
         'ex' : ex,
         'ey' : ey,
-        'l2distance' : l2distance,
-        'distance'   : float(entry_strings[4].strip()),
         'st' : st,
         'et' : et,
         'syear'  : start_time.year,
@@ -78,13 +75,13 @@ def process_entry(line, n=4):
         'ehour'  : end_time.hour,
         'emin'   : end_time.minute,
         'esec'   : end_time.second,
-        'pcount' : int(entry_strings[3].strip()), #Passenger count
+        'pcount' : int(entry_strings[9].strip()), #Passenger count
         'deltat' : deltat
     }
     
     return entry
 
-def check_valid(entry, year, month, min_time=59, max_speed=36, min_distance=100):
+def check_valid(entry, year, month, min_time=59):
     ''' Ensure an entry meets these following rules:
     1. Starts during the same year/month as the provided parameters.
     2. l2 distance is at least min_distance  (100m)
@@ -95,9 +92,7 @@ def check_valid(entry, year, month, min_time=59, max_speed=36, min_distance=100)
     '''
     if not entry['syear']  == year:   return False
     if not entry['smonth'] == month:  return False
-    if not entry['l2distance'] >= min_distance:return False
     if not entry['deltat'] >= min_time: return False
-    if not (entry['l2distance'] / entry['deltat']) <= max_speed: return False 
     return True
     
 

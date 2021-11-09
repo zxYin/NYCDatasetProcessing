@@ -4,18 +4,18 @@
 from math import sin, cos, floor, radians, atan2, sqrt
 import numpy as np
 
-origin_longitude        = -74.038971
-origin_latitude         =  40.709279
-top_left_longitude      = -73.96834326
-top_left_latitude       =  40.81703286
-bottom_right_longitude  = -73.996317
-bottom_right_latitude   =  40.68132125
-# origin_longitude        = -74.0204
-# origin_latitude         =  40.7467
-# top_left_longitude      = -73.95
-# top_left_latitude       =  40.77
-# bottom_right_longitude  = -74.02
-# bottom_right_latitude   =  40.67
+# origin_longitude        = -74.038971
+# origin_latitude         =  40.709279
+# top_left_longitude      = -73.96834326
+# top_left_latitude       =  40.81703286
+# bottom_right_longitude  = -73.996317
+# bottom_right_latitude   =  40.68132125
+origin_longitude        = -74.0204
+origin_latitude         =  40.7467
+top_left_longitude      = -73.95
+top_left_latitude       =  40.77
+bottom_right_longitude  = -74.02
+bottom_right_latitude   =  40.67
 
 # Top-right lat/lon 40.78907511 -73.92568926
 
@@ -63,10 +63,10 @@ def gps_to_xy( lon, lat,
 
 # Values for the prebaked function below:
 origin_array = np.array([origin_longitude, origin_latitude])
-# inv_basis = np.array([[4.30763542,  14.18007025],
-#                      [-13.0153448,    0.07395082]])
-inv_basis = np.array([[ 16.39908019,   4.25489522],
-                      [-10.74884902,   6.49152027]])
+inv_basis = np.array([[4.30763542,  14.18007025],
+                     [-13.0153448,    0.07395082]])
+# inv_basis = np.array([[ 16.39908019,   4.25489522],
+#                       [-10.74884902,   6.49152027]])
 
 def pgps_to_xy(lon, lat):
     ''' gps_to_xy, using prebaked values to increase performance.'''
